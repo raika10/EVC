@@ -46,9 +46,10 @@ API は、GitHub でログインして、許可リストに入っている人だ
 | 項目 | 値 |
 |---|---|
 | Homepage URL | `https://<project>.web.app` |
-| Callback URL | `https://<project>.firebaseapp.com/__/auth/handler`(手順 3 で Firebase の画面に出る URL と同じにする) |
+| Callback URL(Redirect URI と表示されることもある) | `https://<project>.firebaseapp.com/__/auth/handler`(手順 3 で Firebase の画面に出る URL と同じにする) |
 | Expire user authorization tokens | 付けたまま(トークンは 8 時間で切れ、切れたらログインし直す) |
-| Request user authorization (OAuth) during installation | 付けない |
+| Request user authorization (OAuth) during installation | 付けない(付けると、インストールのあとに GitHub が Callback URL へ直接戻すので、Firebase の画面に「Unable to process request due to missing initial state」と出る) |
+| Setup URL | 空のまま |
 | Webhook | Active を外す(使わない) |
 | Repository permissions | `Contents: Read-only` と `Metadata: Read-only` だけ |
 | Account permissions | すべて No access |
