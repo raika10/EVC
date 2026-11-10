@@ -1,4 +1,4 @@
-# EVC (Escape VibeCoder)
+# EVC (Escape VibeCoder)開発リポジトリ
 
 AI に作らせたコードを「作っただけ」で終わらせないための、コード理解度チェック Web アプリ。
 
