@@ -5,6 +5,8 @@ export class ApiError extends Error {
   constructor(
     public code: string,
     message: string,
+    /** API が返したエラーの本文(error と message のほかに、案内などが入ることがある)。 */
+    public data?: unknown,
   ) {
     super(message);
   }
@@ -28,7 +30,7 @@ async function request<T>(path: string, body?: unknown, signal?: AbortSignal): P
     if (data === null && res.status >= 500) {
       throw new ApiError("unreachable", "API サーバーに接続できません。API が起動しているか確認してください");
     }
-    throw new ApiError(data?.error ?? "unknown", data?.message ?? `エラーが発生しました (${res.status})`);
+    throw new ApiError(data?.error ?? "unknown", data?.message ?? `エラーが発生しました (${res.status})`, data);
   }
   return data as T;
 }

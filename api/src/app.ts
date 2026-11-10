@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { parseAllowlist, requireUser, type Allowlist, type AuthUser, type AuthVariables, type Authenticator } from "./auth.js";
 import type { RepoSize } from "./github/filter.js";
+import { findRepoAccess, type RepoAccess } from "./github/installations.js";
 import { checkRepo, fetchRepoSnapshot, type RepoCheck, type RepoSnapshot } from "./github/snapshot.js";
 import {
   fetchAuthoredSnapshot,
@@ -34,6 +35,8 @@ export type Deps = {
   fetchAuthoredSnapshot: (url: string, login: string, userToken?: string) => Promise<RepoSnapshot>;
   /** 入力欄の即時チェック用。リポジトリを読めるかどうかだけを確かめる。 */
   checkRepo: (url: string, userToken?: string) => Promise<RepoCheck>;
+  /** 読めなかったリポジトリを、EVC(GitHub App)に読ませるための GitHub の画面を調べる。 */
+  findRepoAccess: (url: string, userToken: string) => Promise<RepoAccess>;
   /** 未指定なら開発用で、すべてのリクエストを DEV_USER として扱う。Cloud Run では必ず指定する。 */
   auth?: Authenticator;
   /** 使ってよい人。未指定なら環境変数 ALLOWED_GITHUB_IDS。 */
@@ -81,6 +84,7 @@ export function createApp(partial: Partial<Deps> = {}): Hono<{ Variables: AuthVa
       partial.checkRepo ??
       ((url, userToken) =>
         userToken ? checkRepo(url, { token: userToken, allowPrivate: true }) : checkRepo(url, { token: process.env.GITHUB_TOKEN })),
+    findRepoAccess: partial.findRepoAccess ?? ((url, userToken) => findRepoAccess(url, userToken)),
     fetchSnapshot:
       partial.fetchSnapshot ??
       ((url, userToken) =>
@@ -138,7 +142,17 @@ export function createApp(partial: Partial<Deps> = {}): Hono<{ Variables: AuthVa
   });
   app.post("/api/repo/check", async (c) => {
     const body = await c.req.json<{ url?: string }>().catch(() => ({}) as { url?: string });
-    return c.json(await deps.checkRepo(String(body.url ?? ""), c.get("githubToken")));
+    const url = String(body.url ?? "");
+    const token = c.get("githubToken");
+    try {
+      return c.json(await deps.checkRepo(url, token));
+    } catch (e) {
+      // ログインしているのに見つからないときは、EVC(GitHub App)にそのリポジトリを読ませる画面を教える。
+      // 調べられなくても、見つからなかったことだけは返す
+      if (!(e instanceof RepoError) || e.code !== "not_found" || !token) throw e;
+      const access = await deps.findRepoAccess(url, token).catch(() => undefined);
+      return c.json({ error: e.code, message: e.message, ...(access ? { access } : {}) }, REPO_ERROR_STATUS.not_found);
+    }
   });
 
   app.post("/api/repo/preview", async (c) => {

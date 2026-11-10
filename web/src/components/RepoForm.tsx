@@ -4,7 +4,7 @@ import { ApiError, checkRepo, listAuthors } from "../api";
 import { useAuth } from "../auth";
 import { loginErrorMessage } from "../authStatus";
 import { githubAppInstallUrl } from "../githubApp";
-import { checkDelay, checkFailure, repoHint, type RepoCheckState } from "../repoCheck";
+import { accessFrom, checkDelay, checkFailure, repoHint, type RepoCheckState } from "../repoCheck";
 import type { RepoAuthor } from "../types";
 import { Wordmark } from "./Wordmark";
 
@@ -34,7 +34,7 @@ export function RepoForm({ onSubmit, error }: Props) {
         if (!abort.signal.aborted) setCheck({ state: "ok", name: `${repo.owner}/${repo.repo}` });
       } catch (e) {
         if (abort.signal.aborted) return;
-        setCheck(e instanceof ApiError ? checkFailure(e.code, e.message) : { state: "idle" });
+        setCheck(e instanceof ApiError ? checkFailure(e.code, e.message, accessFrom(e.data)) : { state: "idle" });
       }
     }, checkDelay(pasted.current));
     pasted.current = false;
@@ -48,9 +48,9 @@ export function RepoForm({ onSubmit, error }: Props) {
 
   const hint = repoHint(check, { loginEnabled: enabled, hasGithubToken, canInstall: githubAppInstallUrl !== undefined });
 
-  // GitHub の画面で EVC に許可を出して、この画面に戻ってきたら確かめ直す
+  // GitHub の画面で EVC に許可を出して(リポジトリを足して)、この画面に戻ってきたら確かめ直す
   useEffect(() => {
-    if (hint !== "install") return;
+    if (hint !== "install" && hint !== "configure") return;
     let last = 0;
     const again = () => {
       // 戻ったときは focus と visibilitychange の両方が来ることがあるので、1 回にまとめる
@@ -136,6 +136,19 @@ export function RepoForm({ onSubmit, error }: Props) {
             ログインし直す
           </button>
         </p>
+      )}
+      {hint === "configure" && check.state === "error" && check.access?.kind === "configure" && (
+        <div className="reconnect">
+          <p>
+            非公開リポジトリなら、GitHub で EVC が読めるリポジトリに足すと読めます。
+            <a href={check.access.url} target="_blank" rel="noreferrer">
+              GitHub で足す
+            </a>
+          </p>
+          <p className="reconnect-note">
+            開いた画面の Repository access でこのリポジトリを選び、Save を押してから、この画面に戻ってください。自動で確かめ直します。
+          </p>
+        </div>
       )}
       {hint === "install" && (
         <div className="reconnect">

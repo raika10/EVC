@@ -84,9 +84,12 @@ const app = createApp({
     { login: "another-user", commits: 3 },
   ],
   fetchAuthoredSnapshot: async () => ({ ...snapshot, authored: { "src/add.ts": [{ start: 1, end: 6 }] } }),
+  // URL に configured を含めると、すでに EVC を入れたアカウントの案内(設定の画面)を試せる
+  findRepoAccess: async (url) =>
+    url.includes("configured") ? { kind: "configure", url: "https://github.com/settings/installations" } : { kind: "install" },
   // URL に missing や secret を含めると、入力欄のエラー表示を試せる
   checkRepo: async (url) => {
-    if (url.includes("missing")) throw new RepoError("not_found", "リポジトリが見つかりません(非公開の可能性もあります)");
+    if (url.includes("missing") || url.includes("configured")) throw new RepoError("not_found", "リポジトリが見つかりません(非公開の可能性もあります)");
     if (url.includes("secret")) throw new RepoError("private", "非公開リポジトリです。GitHub でログインし直すと読めます");
     return { owner: "mock", repo: "calculator", description: null };
   },
