@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, checkRepo, listAuthors } from "../api";
 import { useAuth } from "../auth";
 import { loginErrorMessage } from "../authStatus";
-import { checkDelay, checkFailure, mayNeedGithubLogin, type RepoCheckState } from "../repoCheck";
+import { githubAppInstallUrl } from "../githubApp";
+import { checkDelay, checkFailure, repoHint, type RepoCheckState } from "../repoCheck";
 import type { RepoAuthor } from "../types";
 import { Wordmark } from "./Wordmark";
 
@@ -15,6 +16,8 @@ export function RepoForm({ onSubmit, error }: Props) {
   const [authors, setAuthors] = useState<RepoAuthor[]>([]);
   const [author, setAuthor] = useState("");
   const [reconnectError, setReconnectError] = useState<string | null>(null);
+  // 増やすと、同じ URL をもう一度確かめる
+  const [recheck, setRecheck] = useState(0);
   const pasted = useRef(false);
   const { enabled, hasGithubToken, reconnectGithub } = useAuth();
 
@@ -40,8 +43,29 @@ export function RepoForm({ onSubmit, error }: Props) {
       clearTimeout(timer);
       abort.abort();
     };
-    // GitHub でログインし直したら、同じ URL をもう一度確かめる
-  }, [url, hasGithubToken]);
+    // GitHub でログインし直したときや、GitHub で許可して戻ってきたときも、同じ URL をもう一度確かめる
+  }, [url, hasGithubToken, recheck]);
+
+  const hint = repoHint(check, { loginEnabled: enabled, hasGithubToken, canInstall: githubAppInstallUrl !== undefined });
+
+  // GitHub の画面で EVC に許可を出して、この画面に戻ってきたら確かめ直す
+  useEffect(() => {
+    if (hint !== "install") return;
+    let last = 0;
+    const again = () => {
+      // 戻ったときは focus と visibilitychange の両方が来ることがあるので、1 回にまとめる
+      if (document.visibilityState !== "visible" || Date.now() - last < 1000) return;
+      last = Date.now();
+      pasted.current = true;
+      setRecheck((n) => n + 1);
+    };
+    window.addEventListener("focus", again);
+    document.addEventListener("visibilitychange", again);
+    return () => {
+      window.removeEventListener("focus", again);
+      document.removeEventListener("visibilitychange", again);
+    };
+  }, [hint]);
 
   const reconnect = async () => {
     setReconnectError(null);
@@ -105,13 +129,26 @@ export function RepoForm({ onSubmit, error }: Props) {
         {check.state === "ok" && `✓ ${check.name}`}
         {check.state === "error" && check.message}
       </p>
-      {enabled && mayNeedGithubLogin(check, hasGithubToken) && (
+      {hint === "relogin" && (
         <p className="reconnect">
           非公開リポジトリなら、GitHub でログインし直すと読めます。
           <button type="button" className="link" onClick={reconnect}>
             ログインし直す
           </button>
         </p>
+      )}
+      {hint === "install" && (
+        <div className="reconnect">
+          <p>
+            非公開リポジトリなら、GitHub で EVC に読む許可を出すと読めます。
+            <a href={githubAppInstallUrl} target="_blank" rel="noreferrer">
+              GitHub で許可する
+            </a>
+          </p>
+          <p className="reconnect-note">
+            開いた画面で読ませるリポジトリを選び、Install を押してから、この画面に戻ってください。自動で確かめ直します。
+          </p>
+        </div>
       )}
       {reconnectError && <p className="error">{reconnectError}</p>}
       {authors.length > 0 && (

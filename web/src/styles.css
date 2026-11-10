@@ -164,9 +164,13 @@ button.block { display: block; width: 100%; }
 .gate p + p { margin-top: -12px; }
 .gate .gate-id { font-family: "Roboto Mono", Consolas, Menlo, monospace; overflow-wrap: anywhere; user-select: all; }
 
-/* 非公開リポジトリを読むために、GitHub でログインし直す案内 */
+/* 非公開リポジトリを読むための案内(ログインし直す、GitHub で EVC に読む許可を出す) */
 .reconnect { margin: -6px 0 14px; color: var(--muted); font-size: 0.875rem; }
+.reconnect p { margin: 0; }
 .reconnect button.link { margin-left: 8px; font-size: inherit; }
+.reconnect a { margin-left: 8px; color: var(--accent); font-weight: 500; text-decoration: none; }
+.reconnect a:hover { text-decoration: underline; }
+.reconnect .reconnect-note { margin-top: 4px; font-size: 0.8125rem; }
 
 /* 読み込み中 */
 .loading { margin: auto 0; padding-bottom: 8vh; text-align: center; }

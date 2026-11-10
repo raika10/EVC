@@ -12,11 +12,21 @@ export function checkFailure(code: string, message: string): RepoCheckState {
 }
 
 /**
- * GitHub でログインし直すと読めるかもしれない失敗か。
- * GitHub のトークンはリロードすると消えるので、そのあとは非公開リポジトリが「見つからない」になる。
+ * 非公開リポジトリが読めなかったときに出す案内。
+ * - relogin: GitHub のトークンが無い(リロードすると消える)。ログインし直せば読めるかもしれない
+ * - install: トークンはあるのに見つからない。GitHub App は、インストールされたリポジトリしか読めないため、
+ *   そのリポジトリに EVC を入れる(読む許可を出す)必要がある
  */
-export function mayNeedGithubLogin(check: RepoCheckState, hasGithubToken: boolean): boolean {
-  return check.state === "error" && (check.code === "not_found" || check.code === "private") && !hasGithubToken;
+export type RepoHint = "relogin" | "install" | null;
+
+export function repoHint(
+  check: RepoCheckState,
+  opts: { loginEnabled: boolean; hasGithubToken: boolean; canInstall: boolean },
+): RepoHint {
+  if (!opts.loginEnabled || check.state !== "error") return null;
+  if (check.code !== "not_found" && check.code !== "private") return null;
+  if (!opts.hasGithubToken) return "relogin";
+  return opts.canInstall ? "install" : null;
 }
 
 /** 打ち込み途中に問い合わせないよう待つ時間。貼り付けのときは待たない。 */

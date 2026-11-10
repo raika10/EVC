@@ -61,7 +61,7 @@ API は、GitHub でログインして、許可リストに入っている人だ
 gh api users/<ユーザー名> --jq .id
 ```
 
-5. 非公開リポジトリを読ませたい利用者は、GitHub App をそのリポジトリにインストールする(`https://github.com/apps/<App の名前>` の Install)。組織のリポジトリは、組織のオーナーの承認が要る。
+5. 非公開リポジトリを読ませたい利用者は、GitHub App をそのリポジトリにインストールする(`https://github.com/apps/<App の名前>` の Install)。ログインだけでは読めない(GitHub App は、インストールされたリポジトリしか読めない)。「All repositories」を選べば、自分のリポジトリは、あとから作るものも含めてすべて読める。組織のリポジトリは、組織のオーナーの承認が要る。画面は、ログインしているのにリポジトリが見つからないときに、このインストールの画面への案内を出す(`VITE_GITHUB_APP_SLUG` を設定したとき)。
 
 ## 4. API を Cloud Run へ
 
@@ -89,7 +89,7 @@ gcloud run services update evc-api --region asia-northeast1 --update-env-vars "A
 
 ## 5. Web を Hosting へ
 
-ビルドのときに `VITE_FIREBASE_*`(`.env.example` 参照)が必要です。無いと、画面に「ログインの設定がありません」と出ます。
+ビルドのときに `VITE_FIREBASE_*`(`.env.example` 参照)が必要です。無いと、画面に「ログインの設定がありません」と出ます。`VITE_GITHUB_APP_SLUG`(GitHub App の URL の名前。`deploy.yml` では `evc-escape-vibecoder`)も渡すと、非公開リポジトリが読めないときに、GitHub App のインストールの案内を出します。
 
 ```sh
 npm ci

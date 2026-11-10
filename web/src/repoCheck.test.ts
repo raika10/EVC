@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkDelay, checkFailure, mayNeedGithubLogin } from "./repoCheck";
+import { checkDelay, checkFailure, repoHint } from "./repoCheck";
 
 describe("checkFailure", () => {
   it.each(["invalid_url", "not_found", "private"])("shows %s as an error", (code) => {
@@ -11,18 +11,29 @@ describe("checkFailure", () => {
   });
 });
 
-describe("mayNeedGithubLogin", () => {
+describe("repoHint", () => {
+  const signedIn = { loginEnabled: true, hasGithubToken: true, canInstall: true };
+
   it.each(["not_found", "private"])("suggests logging in again when %s and the GitHub token is gone", (code) => {
-    expect(mayNeedGithubLogin(checkFailure(code, "理由"), false)).toBe(true);
+    expect(repoHint(checkFailure(code, "理由"), { ...signedIn, hasGithubToken: false })).toBe("relogin");
   });
 
-  it("does not suggest it while the GitHub token is still held", () => {
-    expect(mayNeedGithubLogin(checkFailure("not_found", "理由"), true)).toBe(false);
+  it("suggests letting EVC read the repository when the token is held but the repository is not found", () => {
+    expect(repoHint(checkFailure("not_found", "理由"), signedIn)).toBe("install");
   });
 
-  it("does not suggest it for other results", () => {
-    expect(mayNeedGithubLogin(checkFailure("invalid_url", "理由"), false)).toBe(false);
-    expect(mayNeedGithubLogin({ state: "ok", name: "o/r" }, false)).toBe(false);
+  it("stays quiet when the install page is not configured", () => {
+    expect(repoHint(checkFailure("not_found", "理由"), { ...signedIn, canInstall: false })).toBeNull();
+  });
+
+  it("stays quiet without GitHub login (development mode)", () => {
+    expect(repoHint(checkFailure("not_found", "理由"), { ...signedIn, loginEnabled: false })).toBeNull();
+  });
+
+  it("stays quiet for other results", () => {
+    expect(repoHint(checkFailure("invalid_url", "理由"), signedIn)).toBeNull();
+    expect(repoHint({ state: "ok", name: "o/r" }, signedIn)).toBeNull();
+    expect(repoHint({ state: "checking" }, signedIn)).toBeNull();
   });
 });
 
