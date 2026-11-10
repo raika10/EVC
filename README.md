@@ -11,6 +11,8 @@ GitHub のリポジトリ URL を貼ると、Gemini 3 Flash がログインし�
 - 開発ルール: [docs/workflow.md](docs/workflow.md)
 - デプロイ: [docs/deploy.md](docs/deploy.md)
 
+DevFest GDGoC Japan Hackathon 2026（カテゴリ: 教育）／チーム t112
+
 ## 使い方
 
 1. https://evc-gcp.web.app を開き、GitHub でログインして、利用規約に同意します。
